@@ -4,32 +4,149 @@
     <title>Socket.IO chat</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font: 13px Helvetica, Arial; }
-      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
-      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      body { font: 13px Helvetica, Arial; padding-bottom: 50px;}
+      form#chat-form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form#chat-form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form#chat-form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
       #messages { list-style-type: none; margin: 0; padding: 0; }
       #messages li { padding: 5px 10px; }
       #messages li:nth-child(odd) { background: #eee; }
+      .login {
+        display: block;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        background-color: #ddd;
+        z-index: 10;
+        text-align: center;
+        padding-top: 100px;
+      }
+      .chat {
+        display: none;
+      }
+      .system-message {
+        color: red;
+        font-style: italic;
+      }
     </style>
   </head>
   <body>
-    <ul id="messages"></ul>
-    <form action="">
-      <input id="m" autocomplete="off" /><button>Send</button>
-    </form>
+    <div class="login">
+      <form id="name-form" action="">
+        <label for="nickname">nickname</label>
+        <input id="nickname">
+        <button>Go</button>
+      </form>
+    </div>
+    <div class="chat">
+      <ul id="messages"></ul>
+      <form id="chat-form" action="">
+        <input id="m" autocomplete="off" /><button>Send</button>
+      </form>
+      
+    </div>
+    <div class="online">
+        <ul id="online-ul">
+            
+        </ul>
+    </div>
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
-      var socket = io();
-      $('form').submit(function(){
-        socket.emit('chat message', $('#m').val());
+    var socket = io();
+    var nickname = "";
+    $(function() {
+        if(!localStorage.getItem('nickname')) {
+            $('.login').css({'display': 'block'})
+        }else {
+            nickname = localStorage.getItem('nickname');
+            $('.login').css({'display': 'none'})
+            $('.chat').css({'display': 'block'});
+            socket.emit('register', nickname);
+
+        }
+    })
+
+    //login
+    $('#name-form').submit(function() {
+        if ($('#nickname').val() !== '') {
+            nickname = $('#nickname').val();
+        }else {
+            nickname = 'anonymous';
+        }
+        localStorage.setItem('nickname', nickname);
+        $('.login').css({'display': 'none'});
+        $('.chat').css({'display': 'block'});
+
+        socket.emit('register', nickname);
+        return false;
+    })
+
+
+    // chat
+    $('#chat-form').submit(function() {
+        if ($('#m').val() === '') {
+
+        } else {
+            socket.emit('chat message', $('#m').val());
+            $('#messages').append($('<li>').text('Me: ' + $('#m').val()));
+            $("body").animate({ scrollTop: $(document).height() }, "slow");
+        }
         $('#m').val('');
         return false;
-      });
-      socket.on('chat message', function(msg){
+    });
+    socket.on('chat message', function(msg) {
         $('#messages').append($('<li>').text(msg));
-      });
+        $("body").animate({ scrollTop: $(document).height() }, "slow");
+    });
+    socket.on('system message', function(msg) {
+        $('#messages').append($('<li>').text(msg).addClass('system-message'))
+        $("#body").animate({ scrollTop: $(document).height() }, "slow");
+    })
+
+
+
+    //user is typing
+    var timeout = undefined;
+    var typing = false;
+    var title = document.title;
+    function timeoutFn() {
+        typing = false;
+        socket.emit('nottyping');
+    }
+
+    function onKeyDownNotEnter() {
+        if(!typing) {
+            typing = true;
+            socket.emit('typing');
+            timeout = setTimeout(timeoutFn, 1000);
+        }else {
+            clearTimeout(timeout);
+            timeout = setTimeout(timeoutFn, 1000);
+        }
+    }
+    $('#m').keypress(function(event) {
+        if(event.which === 13) {
+            clearTimeout(timeout);
+        }else {
+            console.log( 'typing' );
+            onKeyDownNotEnter();
+        }
+    })
+    socket.on('typing', function() {
+        document.title = 'typing...';
+    })
+    socket.on('nottyping', function() {
+        document.title = title;
+    })
+    socket.on('online', function(data) {
+            $('#online-ul').append($('<li>').text(data))
+        for (var i = data.length - 1; i >= 0; i--) {
+        }
+    })
     </script>
+
   </body>
 </html>
