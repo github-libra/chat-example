@@ -25,6 +25,9 @@
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="https://code.jquery.com/jquery-2.1.4.js"></script>
     <script>
+
+    $(function() {
+
         $chatroom1 = $("#chatroom1");
         $chatroom2 = $("#chatroom2");
         $dialog = $("#dialog");
@@ -55,10 +58,14 @@
             }
             $(this).prop('disabled', true);
             $('#'+client.room).prop('disabled', false);
+            console.log( client.room );
             client.emit('subscribe', {room: this.id, old: client.room})
             client.room = this.id;
+            console.log( client.room );
+            
         })
 
+    })
         
     </script>
 </body>
