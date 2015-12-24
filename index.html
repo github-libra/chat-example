@@ -1,72 +1,77 @@
-
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Socket</title>
-    <style>
-    #dialog {
-        width: 500px;
-        height: 400px;
-        border: 1px solid;
-        overflow: auto;
-        margin-top: 50px;
-    }
-    </style>
 </head>
+
 <body>
-
-    <h1>Chat</h1>
-    <div id="btngroup">
-        <button id="chatroom1">chatroom 1</button>
-        <button id="chatroom2">chatroom 2</button> 
-    </div>
-    <div id="dialog"></div>
-
+    <button id="btn1">env101</button>
+    <button id="btn2">env102</button>
+    <button id="put">put</button>
+    <button id="delete">socket</button>
+    <pre id="info"></pre>
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="https://code.jquery.com/jquery-2.1.4.js"></script>
     <script>
+    $env101 = $('#btn1');
+    $env102 = $('#btn2');
+    $info = $('#info');
+    $put = $('#put')
+    $delete = $('#delete')
 
-    $(function() {
+    var client = io.connect('/ilab'),
+        currentRoom = '';
 
-        $chatroom1 = $("#chatroom1");
-        $chatroom2 = $("#chatroom2");
-        $dialog = $("#dialog");
-        $btngroup = $("#btngroup");
+    client.on('connect', function() {
+        client.emit('subscribe', {
+            toRoom: 'env101'
+        });
+        currentRoom = 'env101';
+        $info.append('<p> in room env101</p>')
+        console.log( client );
+        $info.append('<p> socketid: '+ client.io.engine.id+'</p>')
+    });
 
-        var client = io.connect('/chat');
-        client.on('connect', function(data) {
-            $dialog.append('<p>connected to server</p>');
-            $chatroom1.prop('disabled', true);
-            client.room = 'chatroom1';
-            client.emit('subscribe', {room: 'chatroom1'});
-        })
-        client.on('update-room', function(data) {
-            $dialog.append('<p>in '+ data +'</p>')
-        })
+    client.on('update', function(data) {
+        $info.append('<p>socket:' + JSON.stringify(data) + '</p>')
+    })
 
-        client.on('msg', function(msg) {
-            $dialog.append('<p>' + msg + '</p>');
-            $dialog.scrollTop($dialog[0].scrollHeight);
-        })
-
-        //event
-        $btngroup.delegate('button', 'click', function() {
-            $dialog.text("");
-
-            if(this.id === client.room) {
-                return false;
+    $put.on('click', function() {
+        $.ajax({
+            method: 'PUT', 
+            url: '/env',
+            data: {id: "env101"},
+            success: function(res) {
+                $info.append('<p>'+JSON.stringify(res)+'</p>');
+            },
+            error: function(err) {
+                $info.append('<p>'+JSON.stringify(err)+'</p>');
             }
-            $(this).prop('disabled', true);
-            $('#'+client.room).prop('disabled', false);
-            console.log( client.room );
-            client.emit('subscribe', {room: this.id, old: client.room})
-            client.room = this.id;
-            console.log( client.room );
-            
         })
+    })
+    $delete.on('click', function() {
+        client.emit('delete', 'delete socket');
+    })
+
+    $env101.on('click', function(e) {
+        if(currentRoom === 'env101') return;
+        client.emit('unsubscribe', {fromRoom: 'env102'});
+        client.emit('subscribe', {toRoom: 'env101'});
+        currentRoom = 'env101'
+        $info.append('<p> in room env101</p>')
 
     })
-        
+
+    $env102.on('click', function(e) {
+        if(currentRoom === 'env102') return;
+        client.emit('unsubscribe', {fromRoom: 'env101'});
+        client.emit('subscribe', {toRoom: 'env102'});
+        currentRoom = 'env102'
+        $info.append('<p> in room env102</p>')
+
+    })    
     </script>
 </body>
+
 </html>
